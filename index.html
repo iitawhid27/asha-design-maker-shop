@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ASHA DESIGN MAKER — Online Shop</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f5f7fb;color:#172033}
+header{background:#111827;color:#fff;padding:18px 5%;display:flex;gap:20px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.logo{font-size:23px;font-weight:800}.search{flex:1;max-width:520px;padding:12px 15px;border:0;border-radius:8px}
+nav a{color:#fff;text-decoration:none;margin:0 8px}.hero{padding:45px 5%;background:linear-gradient(120deg,#0f172a,#2563eb);color:#fff}
+.hero h1{font-size:42px;margin:0 0 10px}.container{max-width:1200px;margin:auto;padding:30px 5%}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:25px}.toolbar button,.btn{padding:11px 15px;border:0;border-radius:7px;cursor:pointer;background:#2563eb;color:#fff}
+.products{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px}.card{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 15px #00000012}.card img{width:100%;height:190px;object-fit:cover}.card .p{padding:15px}.price{font-size:21px;font-weight:bold;color:#0f766e}.cart{position:fixed;right:20px;bottom:20px;background:#111827;color:#fff;padding:14px 18px;border-radius:50px;cursor:pointer}
+.modal{display:none;position:fixed;inset:0;background:#0008;align-items:center;justify-content:center;padding:20px}.box{background:#fff;padding:25px;border-radius:12px;max-width:520px;width:100%}.box input,.box textarea,.box select{width:100%;padding:11px;margin:7px 0;border:1px solid #ddd;border-radius:7px}.admin{display:none}.row{display:flex;gap:8px;flex-wrap:wrap}table{width:100%;border-collapse:collapse;background:#fff}th,td{padding:10px;border-bottom:1px solid #eee;text-align:left}.danger{background:#dc2626!important}.green{background:#059669!important}
+</style></head>
+<body>
+<header><div class="logo">ASHA DESIGN MAKER</div><input id="search" class="search" placeholder="পণ্য খুঁজুন..." oninput="renderProducts()"><nav><a href="#shop">Shop</a><a href="#admin">Admin</a></nav></header>
+<section class="hero"><h1>অনলাইনে পণ্য কিনুন</h1><p>ASHA DESIGN MAKER — আপনার পছন্দের পণ্য এক জায়গায়।</p></section>
+<main id="shop" class="container"><div class="toolbar"><button onclick="showAll()">সব পণ্য</button><button onclick="showCategory()">ক্যাটাগরি</button></div><div id="products" class="products"></div></main>
+
+<section id="admin" class="container admin">
+<h2>Admin Panel</h2><div class="row"><button onclick="openProduct()">➕ পণ্য যোগ</button><button onclick="exportData()">💾 Backup</button><button onclick="importData()">↩ Restore</button><button class="danger" onclick="clearProducts()">সব পণ্য মুছুন</button></div>
+<h3>Products — Add / Edit / Delete</h3><table><thead><tr><th>ID</th><th>নাম</th><th>দাম</th><th>স্টক</th><th>Action</th></tr></thead><tbody id="adminRows"></tbody></table>
+</section>
+
+<div class="cart" onclick="openCart()">🛒 Cart (<span id="cartCount">0</span>)</div>
+<div id="productModal" class="modal"><div class="box"><h2 id="modalTitle">পণ্য</h2><input id="pid" placeholder="Product ID"><input id="pname" placeholder="পণ্যের নাম"><input id="price" type="number" placeholder="বিক্রয় মূল্য"><input id="stock" type="number" placeholder="স্টক"><input id="cat" placeholder="ক্যাটাগরি"><input id="img" placeholder="ছবির URL"><textarea id="desc" placeholder="বিবরণ"></textarea><button class="btn" onclick="saveProduct()">Save</button> <button onclick="closeModal()">Cancel</button></div></div>
+<div id="cartModal" class="modal"><div class="box"><h2>আপনার Cart</h2><div id="cartList"></div><hr><button class="btn green" onclick="checkout()">Checkout</button> <button onclick="closeCart()">Close</button></div></div>
+<script>
+const key='asha_products_v1', cartKey='asha_cart_v1';
+let products=JSON.parse(localStorage.getItem(key)||'null')||[
+{id:'P001',name:'Sample Product',price:500,stock:20,cat:'General',img:'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800',desc:'আপনার নিজের পণ্য দিয়ে এটি পরিবর্তন করুন।'}
+];
+let cart=JSON.parse(localStorage.getItem(cartKey)||'[]'), editId=null;
+function save(){localStorage.setItem(key,JSON.stringify(products));localStorage.setItem(cartKey,JSON.stringify(cart));}
+function renderProducts(){let q=(document.getElementById('search').value||'').toLowerCase();let a=products.filter(p=>(p.name+' '+p.cat).toLowerCase().includes(q));document.getElementById('products').innerHTML=a.map(p=>`<div class="card"><img src="${p.img||'https://via.placeholder.com/600x400?text=Product'}"><div class="p"><h3>${p.name}</h3><p>${p.desc||''}</p><div class="price">৳ ${p.price}</div><p>স্টক: ${p.stock}</p><button class="btn" onclick="addCart('${p.id}')">কার্টে যোগ</button></div></div>`).join('')||'<p>কোনো পণ্য পাওয়া যায়নি।</p>';renderAdmin();}
+function renderAdmin(){document.getElementById('adminRows').innerHTML=products.map(p=>`<tr><td>${p.id}</td><td>${p.name}</td><td>৳${p.price}</td><td>${p.stock}</td><td><button onclick="editProduct('${p.id}')">Edit</button> <button class="danger" onclick="deleteProduct('${p.id}')">Delete</button></td></tr>`).join('')}
+function openProduct(){editId=null;['pid','pname','price','stock','cat','img','desc'].forEach(x=>document.getElementById(x).value='');document.getElementById('productModal').style.display='flex'}
+function editProduct(id){let p=products.find(x=>x.id===id);editId=id;pid.value=p.id;pname.value=p.name;price.value=p.price;stock.value=p.stock;cat.value=p.cat;img.value=p.img;desc.value=p.desc;document.getElementById('productModal').style.display='flex'}
+function saveProduct(){let p={id:pid.value.trim(),name:pname.value.trim(),price:+price.value||0,stock:+stock.value||0,cat:cat.value.trim(),img:img.value.trim(),desc:desc.value.trim()};if(!p.id||!p.name)return alert('Product ID এবং নাম দিন');let i=products.findIndex(x=>x.id===editId);if(i>=0)products[i]=p;else products.push(p);save();closeModal();renderProducts()}
+function deleteProduct(id){if(confirm('এই পণ্যটি Delete করবেন?')){products=products.filter(p=>p.id!==id);save();renderProducts()}}
+function clearProducts(){if(confirm('সব পণ্য Delete করবেন?')){products=[];save();renderProducts()}}
+function addCart(id){let p=products.find(x=>x.id===id);if(!p||p.stock<1)return alert('স্টক নেই');cart.push(id);p.stock--;save();renderProducts();updateCart()}
+function updateCart(){cartCount.textContent=cart.length}
+function openCart(){cartList.innerHTML=cart.map((id,i)=>{let p=products.find(x=>x.id===id);return p?`<p>${p.name} — ৳${p.price}</p>`:''}).join('')||'<p>Cart খালি।</p>';cartModal.style.display='flex'}
+function closeCart(){cartModal.style.display='none'}
+function checkout(){alert('Demo Checkout: এখানে আপনার customer form + bKash/Nagad/COD payment যুক্ত করা যাবে।')}
+function closeModal(){productModal.style.display='none'}
+function showAll(){search.value='';renderProducts()} function showCategory(){alert('Category filter: Admin থেকে category যোগ/পরিবর্তন করুন।')}
+function exportData(){let b=new Blob([JSON.stringify(products,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='asha-products-backup.json';a.click()}
+function importData(){let i=document.createElement('input');i.type='file';i.accept='.json';i.onchange=()=>{let r=new FileReader();r.onload=()=>{products=JSON.parse(r.result);save();renderProducts()};r.readAsText(i.files[0])};i.click()}
+function checkAdmin(){document.querySelector('.admin').style.display=location.hash==='#admin'?'block':'none'}window.onhashchange=checkAdmin;checkAdmin();renderProducts();updateCart();
+</script></body></html>
